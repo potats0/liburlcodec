@@ -1,19 +1,15 @@
-use std::{
-    ffi::{c_char, CStr},
-    os::raw::c_int,
-};
+use std::{ffi::CStr, os::raw::c_int};
 
-type DebugFn = unsafe extern "C" fn(*const c_char, ...) -> c_int;
+#[repr(C)]
+#[derive(Debug)]
+pub enum CodecType {
+    URL,
+    QUERYSTRING,
+}
 
 #[no_mangle]
-pub extern "C" fn registerDebugFunc(debug_fn: DebugFn) -> c_int {
-    unsafe {
-        debug_fn(
-            b"Hello, %s!\n\0".as_ptr() as *const c_char,
-            b"World\0".as_ptr() as *const c_char,
-        );
-    }
-    return 0;
+pub extern "C" fn get_enum() -> CodecType {
+    CodecType::URL
 }
 
 #[no_mangle]
