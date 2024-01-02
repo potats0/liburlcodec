@@ -13,5 +13,5 @@ cbindgen = "0.26.0"
 
 
 [lib]
-name = "liburlcodec"
+name = "urlcodec"
 crate-type = ["cdylib", "rlib"]
