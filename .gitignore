@@ -1,0 +1,5 @@
+/target
+/Cargo.lock
+test # c语言测试的编译后产物
+.vscode/*
+*.h
