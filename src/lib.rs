@@ -34,7 +34,6 @@ pub extern "C" fn urldecode(c_str: *mut u8, length: usize) -> c_int {
         // 几重编码就调用几次
         urldecode_and_push!(vec);
         urldecode_and_push!(vec);
-        println!();
     }
     // 如果被解码了，字符长度肯定不一致，所以强行覆盖
     if vec.len() != length {
