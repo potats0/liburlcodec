@@ -1,18 +1,15 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "bindings.h"
-
-int onDataCallback(uint8_t *data, size_t len) {
-    printf("%s", data);
-    return 0;
-}
-
-
 
 
 int main() {
-    unsigned long result = add(4, 5);  // 调用 Rust 函数
-    printf("The result is: %lu\n", result);
-    char *url ="aaaa";
-    urldecode(url, 4);
+    char *url ="%25%36%31%25%36%32%25%36%33%25%36%34%25%36%35%25%36%34";
+    char *src = malloc(100);
+    memcpy(src, url, strlen(url));
+    printf("raw: %s\n", src);
+    urldecode(src, strlen(url));
+    printf("result: %s\n", src);
     return 0;
 }
