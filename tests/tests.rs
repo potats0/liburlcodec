@@ -1,4 +1,4 @@
-use liburlcodec;
+use urlcodec;
 
 #[cfg(test)]
 mod tests {
@@ -6,14 +6,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        let result = liburlcodec::add(2, 2);
-        assert_eq!(result, 4);
-    }
-
-    #[test]
     fn test_urlencoding() {
-        liburlcodec::urldecode("aaaa".as_ptr(), 4);
-        // assert_eq!(result, 4);
+        let mut str = String::from("%25%36%31%25%36%32%25%36%33%25%36%34%25%36%35%25%36%34");
+        urlcodec::urldecode(str.as_mut_ptr(), str.len());
+        assert_eq!(str , "abcded\0434\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
+        println!("in test_urlencoding {:?}", str);
     }
 }
