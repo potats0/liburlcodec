@@ -14,6 +14,15 @@ pub extern "C" fn get_enum() -> CodecType {
     CodecType::URL
 }
 
+/** `urldecode` 将指定的c char做url多重解码
+解码后的内容会覆盖原本的内存区域，如果解码不成功则不会覆盖。
+
+```
+    let mut str = String::from("%25%36%31%25%36%32%25%36%33%25%36%34%25%36%35%25%36%34");
+    urlcodec::urldecode(str.as_mut_ptr(), str.len());
+    assert_eq!(str , "abcded\0434\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0");
+```
+*/
 #[no_mangle]
 pub extern "C" fn urldecode(c_str: *mut u8, length: usize) -> c_int {
     let rust_str: Vec<u8> = unsafe { Vec::from_raw_parts(c_str, length, length) };
@@ -26,7 +35,7 @@ pub extern "C" fn urldecode(c_str: *mut u8, length: usize) -> c_int {
             Some(s) => match *s {
                 b'%' => {
                     handle_hex!(vec);
-                    // 如果想解决多重url编码，那么就多调用几次
+                    // 如果想解决多重url编码，那么就多调用几次，几重编码就调用几次
                     handle_hex!(vec);
                 }
                 _ => continue,
@@ -41,7 +50,7 @@ pub extern "C" fn urldecode(c_str: *mut u8, length: usize) -> c_int {
             ptr::copy_nonoverlapping(vec.as_ptr(), c_str, length);
         }
     }
-    // inhibit compiler from automatically calling T’s destructor
+    // inhibit compiler from automatically calling T’s destructor，所有权在c端，rust的rail释放会导致double free
     core::mem::forget(rust_str);
     return 0;
 }
