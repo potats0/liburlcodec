@@ -31,17 +31,10 @@ pub extern "C" fn urldecode(c_str: *mut u8, length: usize) -> c_int {
     // 所有权不在我们，切记，只能借用
     for element in &rust_str {
         vec.push(*element);
-        match vec.get(vec.len().wrapping_sub(3)) {
-            Some(s) => match *s {
-                b'%' => {
-                    handle_hex!(vec);
-                    // 如果想解决多重url编码，那么就多调用几次，几重编码就调用几次
-                    handle_hex!(vec);
-                }
-                _ => continue,
-            },
-            None => continue,
-        }
+        // 几重编码就调用几次
+        urldecode_and_push!(vec);
+        urldecode_and_push!(vec);
+        println!();
     }
     // 如果被解码了，字符长度肯定不一致，所以强行覆盖
     if vec.len() != length {
