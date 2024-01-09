@@ -27,21 +27,25 @@ pub extern "C" fn get_enum() -> CodecType {
 pub extern "C" fn urldecode(c_str: *mut u8, length: usize) -> c_int {
     let rust_str: Vec<u8> = unsafe { Vec::from_raw_parts(c_str, length, length) };
 
-    let mut vec = Vec::with_capacity(length);
-    // 所有权不在我们，切记，只能借用
-    for element in &rust_str {
-        vec.push(*element);
-        // 几重编码就调用几次
-        urldecode_and_push!(vec);
-        urldecode_and_push!(vec);
-    }
-    // 如果被解码了，字符长度肯定不一致，所以强行覆盖
-    if vec.len() != length {
-        vec.push(0);
-        unsafe {
-            ptr::copy_nonoverlapping(vec.as_ptr(), c_str, length);
+    // 预先搜索一边 % 如果没有%就不做url解码
+    if let Ok(_) = rust_str.binary_search(&b'%') {
+        let mut vec = Vec::with_capacity(length);
+        // 所有权不在我们，切记，只能借用
+        for element in &rust_str {
+            vec.push(*element);
+            // 几重编码就调用几次
+            urldecode_and_push!(vec);
+            urldecode_and_push!(vec);
+        }
+        // 如果被解码了，字符长度肯定不一致，所以强行覆盖
+        if vec.len() != length {
+            vec.push(0);
+            unsafe {
+                ptr::copy_nonoverlapping(vec.as_ptr(), c_str, length);
+            }
         }
     }
+
     // inhibit compiler from automatically calling T’s destructor，所有权在c端，rust的rail释放会导致double free
     core::mem::forget(rust_str);
     return 0;
