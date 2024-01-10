@@ -50,3 +50,65 @@ pub extern "C" fn urldecode(c_str: *mut u8, length: usize) -> c_int {
     core::mem::forget(rust_str);
     return 0;
 }
+
+macro_rules! consume_token {
+    ($characters:expr; $count:expr) => {{
+        for _ in 0..$count {
+            $characters.next();
+        }
+    }};
+}
+
+// 如果解码有问题等不做任何解码
+macro_rules! rollback {
+    ($vec:expr; $($chr:expr),*) => {
+        $(
+            $vec.push($chr);
+        )*
+    };
+}
+
+pub fn unicode_decode(input: &str) -> Option<String> {
+    let mut result = String::new(); // 用于存储解析后的字符串
+    let mut characters = input.chars(); // 字符迭代器
+
+    while let Some(c) = characters.next() {
+        if c != '\\' {
+            result.push(c);
+        } else if let Some(escaped) = characters.next() {
+            match escaped {
+                'u' => {
+                    let hex_digits: String = characters.as_str().chars().take(4).collect();
+                    if let Ok(code_point) = u32::from_str_radix(&hex_digits, 16) {
+                        if let Some(unicode_char) = std::char::from_u32(code_point) {
+                            result.push(unicode_char);
+                            // 只有unicode解码成功，才会消耗四个字符
+                            consume_token!(characters; 4);
+                            continue;
+                        }
+                    }
+                    // 如果unicode解码失败，那么不做任何处理
+                    rollback!(result; '\\', escaped);
+                }
+                'x' => {
+                    let hex_digits: String = characters.as_str().chars().take(2).collect();
+                    if let Ok(code_point) = u8::from_str_radix(&hex_digits, 16) {
+                        if let Some(hex_char) = std::char::from_u32(code_point as u32) {
+                            result.push(hex_char);
+                            consume_token!(characters; 2);
+                            continue;
+                        }
+                    }
+                    rollback!(result; '\\', escaped);
+                }
+                _ => {
+                    rollback!(result; '\\', escaped);
+                }
+            }
+        } else {
+            return None; // 以'\'结尾的无效输入
+        }
+    }
+
+    Some(result)
+}
