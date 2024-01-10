@@ -1,19 +1,6 @@
 use std::{os::raw::c_int, ptr};
 
 mod percent_decode;
-
-#[repr(C)]
-#[derive(Debug)]
-pub enum CodecType {
-    URL,
-    QUERYSTRING,
-}
-
-#[no_mangle]
-pub extern "C" fn get_enum() -> CodecType {
-    CodecType::URL
-}
-
 /** `urldecode` 将指定的c char做url多重解码
 解码后的内容会覆盖原本的内存区域，如果解码不成功则不会覆盖。
 
@@ -68,6 +55,23 @@ macro_rules! rollback {
     };
 }
 
+macro_rules! decode_token {
+    ($iter:expr, $res:expr, $times:expr) => {
+        // 消耗四个token，那就是unicode
+        // 消耗两个token，那就是hex
+        // 如果出了错，就不会消耗token
+        let hex_digits: String = $iter.as_str().chars().take($times).collect();
+        if let Ok(code_point) = u32::from_str_radix(&hex_digits, 16) {
+            if let Some(unicode_char) = std::char::from_u32(code_point) {
+                $res.push(unicode_char);
+                // 只有unicode解码成功，才会消耗四个字符
+                consume_token!($iter; $times);
+                continue;
+            }
+        }
+    };
+}
+
 pub fn unicode_decode(input: &str) -> Option<String> {
     let mut result = String::new(); // 用于存储解析后的字符串
     let mut characters = input.chars(); // 字符迭代器
@@ -78,27 +82,12 @@ pub fn unicode_decode(input: &str) -> Option<String> {
         } else if let Some(escaped) = characters.next() {
             match escaped {
                 'u' => {
-                    let hex_digits: String = characters.as_str().chars().take(4).collect();
-                    if let Ok(code_point) = u32::from_str_radix(&hex_digits, 16) {
-                        if let Some(unicode_char) = std::char::from_u32(code_point) {
-                            result.push(unicode_char);
-                            // 只有unicode解码成功，才会消耗四个字符
-                            consume_token!(characters; 4);
-                            continue;
-                        }
-                    }
+                    decode_token!(characters, result, 4);
                     // 如果unicode解码失败，那么不做任何处理
                     rollback!(result; '\\', escaped);
                 }
                 'x' => {
-                    let hex_digits: String = characters.as_str().chars().take(2).collect();
-                    if let Ok(code_point) = u8::from_str_radix(&hex_digits, 16) {
-                        if let Some(hex_char) = std::char::from_u32(code_point as u32) {
-                            result.push(hex_char);
-                            consume_token!(characters; 2);
-                            continue;
-                        }
-                    }
+                    decode_token!(characters, result, 2);
                     rollback!(result; '\\', escaped);
                 }
                 _ => {
